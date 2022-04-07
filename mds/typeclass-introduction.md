@@ -1,6 +1,5 @@
----
+--- 
 theme: seriph 
-class: 'text-center' 
 highlighter: shiki
 ---
 
@@ -122,11 +121,11 @@ stringEncoder("foo")
 ```scala
 import io.circe.{Encoder, Json}
 
-implicit val intEncoder = new Encoder[Int] {
+implicit val intEncoder: Encoder[Int] = new Encoder[Int] {
   override def apply(a: Int) = Json.fromInt(a)
 }
 
-implicit val stringEncoder = new Encoder[String] {
+implicit val stringEncoder: Encoder[String] = new Encoder[String] {
   override def apply(a: String) = Json.fromString(a)
 }
 
@@ -216,6 +215,124 @@ encodeToJson(Person("taro"))
 encodeToJson(1) // compile Error!
 ```
 
+- つまり型クラスのメリットとして「後付で」抽象化機構を入れ込むことができる
+
+---
+
+## Implicit Derivation 1
+- ジェネリックなフィールドを持つデータ型を考える
+- このデータ型は `name`フィールドがジェネリックになっていて好きな型を入れられる
+
+```scala
+case class GenericNameSB[T](name: T, age: Int)
+
+GenericNameSB(1, 1)
+
+case clas Name(value: String)
+
+GenericNameSB(Name("john"), 2)
+```
+
+---
+
+## Implicit Derivation 2
+- `GenericNameSB`クラスを継承を使用して `JsonEncodable` 化しようとすると型パラメタ `T` に対して制約をかける必要が発生する
+
+```scala
+// nameをjson化するためにTにはJsonEncodableを継承しているという上限境界が必要になる
+case class GenericNameSB[T <: JsonEncodable](name: T, age: Int) extends JsonEncodable {
+  def toJson: Json = Json.obj(
+    "name" -> name.toJson, // ここでtoJsonを呼ばないとnameをJson化する方法がわからない
+    "age" -> Json.fromInt(age)
+  )
+}
+```
+
+- しかしこれはあんまりうれしくなくて、`GenericNameSB`には`Int`などの`JsonEncodable`にしていない or できない型を入れることができなくなってしまう
+
+```scala
+GenericNameSB(1, 2)
+// inferred type arguments [Int] do not conform to method apply's type parameter bounds [T <: JsonEncodable]
+```
+
+- これがサブタイピングで発生する限界
+- すなわちあるデータ型に何らかのtraitを継承させるとき、場合によっては中のデータ型もそのtraitを継承する必要が発生する
+
+---
+
+## Implicit Derivation 3
+- 型クラスを使用すると前述の課題が解決できる
+
+```scala
+case class GenericNameTC[T](name: T, age: Int)
+
+implicit def genericNameTCEncode[T](implicit encoder: Encoder[T]): Encoder[GenericNameTC[T]] =
+  new Encoder[GenericNameTC[T]] {
+    override def apply(a: GenericNameTC[T]): Json = Json.obj(
+      "name" -> encoder(a.name),
+      "age"  -> Json.fromInt(a.age)
+    )
+  }
+
+toJson(GenericNameTC("hoge", 1))
+// val res0: io.circe.Json =
+// {
+//   "name" : "hoge",
+//   "age" : 1
+// }
+
+case class Name(value: String)
+
+toJson(GenericNameTC(Name("john"), 1))
+// could not find implicit value for parameter encoder: io.circe.Encoder[GenericNameTC[Name]]
+```
+
+---
+
+## Implicit Derivation 4
+
+- 詳しく挙動を見る
+- データ型の定義はそのまま
+- 型クラスのインスタンス定義が複雑
+- まずシグネチャを見る
+
+```scala
+implicit def genericNameTCEncode[T](implicit encoder: Encoder[T]): Encoder[GenericNameTC[T]] = ...
+```
+
+- このシグネチャが意味するのは任意の`T`に対して`GenericNameTC[T]`の`Encoder`インスタンスを生成するというとても広い定義
+- しかしこの定義の実装時には当然`T`をJson化する必要がある
+- そのためにimplicit parameterとして`Encoder[T]`インスタンスを要求している
+
+```scala
+implicit def genericNameTCEncode[T](implicit encoder: Encoder[T]): Encoder[GenericNameTC[T]] =
+  new Encoder[GenericNameTC[T]] {
+    override def apply(a: GenericNameTC[T]): Json = Json.obj(
+      "name" -> encoder(a.name), // ここで`Encoder[T]`による`T`のJson化処理が行われる
+      "age" -> Json.fromInt(a.age)
+    )
+  }
+```
+
+---
+
+## Implicit Derivation 5
+- 型クラス版の実装を見てみると各データ型に対する型クラスインスタンスの定義は「別々に」行われていることがわかる
+
+```scala
+// 各々のインスタンス定義は別のものとして実装されている
+implicit val intEncoder: Encoder[Int] = ...
+implicit val stringEncoder: Encoder[String] = ...
+implicit def genericNameTCEncode[T](implicit encoder: Encoder[T]): Encoder[GenericNameTC[T]] = ...
+```
+
+- Scalaの型クラスがすごいのは別々に定義してあるimplicit(=型クラスのインスタンス)をコンパイラが集め、最終的にほしいデータ型のインスタンスを生成してくれること
+- `Encoder[String] + Encoder[GenericNameTC[T] = Encoder[GenericNameTC[String]`のようなイメージ
+- このようにアドホックにデータ型の組み合わせにおいて型クラスのインスタンスが定義されることを「Implicit Derivation」とか「型クラスの導出」とか言ったりする
+
+
 ---
 
 # 参考
+
+- https://typelevel.org/cats/typeclasses.html
