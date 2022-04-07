@@ -211,4 +211,6 @@ encodeToJson(Person("taro"))
 - 例えば Int に対して JsonEncodable継承はできないので Int を encodeToJson関数に突っ込むのは不可能
   - ラッパークラスを作成したりして回避することはできるけど。。。
 
+---
+
 # 参考
