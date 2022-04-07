@@ -211,6 +211,11 @@ encodeToJson(Person("taro"))
 - 例えば Int に対して JsonEncodable継承はできないので Int を encodeToJson関数に突っ込むのは不可能
   - ラッパークラスを作成したりして回避することはできるけど。。。
 
+```scala
+// IntをJsonEncodable化する手段はない
+encodeToJson(1) // compile Error!
+```
+
 ---
 
 # 参考
