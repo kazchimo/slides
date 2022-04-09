@@ -1,6 +1,27 @@
 import io.circe.{Encoder, Json}
 
+implicit val intEncoder: Encoder[Int] = new Encoder[Int] {
+  override def apply(a: Int) = Json.fromInt(a)
+}
+
+implicit val stringEncoder: Encoder[String] = new Encoder[String] {
+  override def apply(a: String) = Json.fromString(a)
+}
+
+case class Dog(name: String, age: Int)
+
+implicit val dogEncoder = new Encoder[Dog] {
+  override def apply(a: Dog) = Json.obj(
+    ("name", Json.fromString(a.name)),
+    ("age", Json.fromInt(a.age))
+  )
+}
+
 def toJson[T](a: T)(implicit encoder: Encoder[T]): Json = encoder(a)
+
+case class Cat(name: String, age: Int)
+
+//toJson(Cat("Garfield", 38))
 
 trait JsonEncodable {
   def toJson: Json

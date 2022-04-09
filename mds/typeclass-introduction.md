@@ -1,8 +1,7 @@
---- 
+---
 theme: seriph 
 highlighter: shiki
 ---
-
 # Typeclass Introduction
 
 ---
@@ -19,12 +18,12 @@ highlighter: shiki
 
 - そもそも「型クラス=Typeclass」という名前は何なのか
 - 最初に聞いたときの思ひで
-    - 「型」と「クラス」って同じちゃうん？（クソ雑魚Rubyプログラマ並の感想）
+  - 「型」と「クラス」って同じちゃうん？（クソ雑魚Rubyプログラマ並の感想）
 - なんで同じ言葉並べてるんや？
-    - 「型」と「クラス」は型クラスの文脈では明確に違う意味を持つ
+  - 「型」と「クラス」は型クラスの文脈では明確に違う意味を持つ
 - 型: いわゆるデータ型、Int、String、Dogとか
-    - クラス: 型を分類するもの
-    - つまり型クラスとはデータ型を何らかの特徴に基づいて分類し、その分類に基づいて多態性を実現する機能
+  - クラス: 型を分類するもの
+  - つまり型クラスとはデータ型を何らかの特徴に基づいて分類し、その分類に基づいて多態性を実現する機能
 
 ---
 
@@ -48,12 +47,11 @@ trait Encoder[A] extends Serializable {
 - この型クラスが言いたいのは何らかの型 AがあってそれがcirceのJsonにできるということ
 - つまり型 Aになにか新しい操作を定義しているような感じ
 
---- 
+---
 
 - 実際に Encoder型クラスを使って具体的な型にencode能力を与えるためには各々型への実装を用意する
 
 ```scala
-
 val intEncoder = new Encoder[Int] {
   override def apply(a: Int) = Json.fromInt(a)
 }
@@ -61,13 +59,12 @@ val intEncoder = new Encoder[Int] {
 val stringEncoder = new Encoder[String] {
   override def apply(a: String) = Json.fromString(a)
 }
-
 ```
 
 - この様に特定の型に対しての型クラスの実装を「型クラスのインスタンス」と呼ぶ
 - 型クラスが型を分類するためのものだったのに対して、特定の型に対して型クラスが実装されたので抽象度が下がっているためこう呼べる
 
---- 
+---
 
 実際に型クラスを通じて獲得した新たな操作を使用するためには型クラスのインスタンスを使えばいい
 
@@ -79,7 +76,7 @@ stringEncoder("foo")
 // val res1: io.circe.Json = "foo"
 ```
 
---- 
+---
 
 # 多相性の整理
 
@@ -92,7 +89,7 @@ stringEncoder("foo")
 
 - いわゆるジェネリクスだと思っておけばいい
 
---- 
+---
 
 ## サブタイピング
 
@@ -108,7 +105,7 @@ stringEncoder("foo")
 - 関数のオーバーロードとかこれ
 - 型クラスが実現する多相性もこれ
 
---- 
+---
 
 # 型クラスを使用したアドホック多相
 
@@ -137,6 +134,7 @@ implicit val dogEncoder = new Encoder[Dog] {
     ("age", Json.fromInt(a.age))
   )
 }
+
 ```
 
 ---
@@ -159,6 +157,12 @@ toJson(Dog("john", 3))
 //   "name" : "john",
 //   "age" : 3
 // }
+
+case class Cat(name: String, age: Int)
+
+// 型クラスのインスタンスが定義されていないものはコンパイルが通らない
+toJson(Cat("Garfield", 38))
+// could not find implicit value for parameter encoder: io.circe.Encoder[Cat]
 ```
 
 - この様に toJson という関数が処理対象のデータ型に対して多相的に振る舞う
@@ -204,6 +208,7 @@ encodeToJson(Person("taro"))
 ---
 
 ## ライブラリコードに対しての抽象化
+
 - 前述の例だとうまい具合にサブタイピングで同じようなことができているような気がする
 - しかしユーザコードではないライブラリコードに対して抽象化をかまそうとするとうまく行かない
 - なぜなら継承はデータ型の定義時点でしか行うことができないから
@@ -220,6 +225,7 @@ encodeToJson(1) // compile Error!
 ---
 
 ## Implicit Derivation 1
+
 - ジェネリックなフィールドを持つデータ型を考える
 - このデータ型は `name`フィールドがジェネリックになっていて好きな型を入れられる
 
@@ -236,6 +242,7 @@ GenericNameSB(Name("john"), 2)
 ---
 
 ## Implicit Derivation 2
+
 - `GenericNameSB`クラスを継承を使用して `JsonEncodable` 化しようとすると型パラメタ `T` に対して制約をかける必要が発生する
 
 ```scala
@@ -248,7 +255,7 @@ case class GenericNameSB[T <: JsonEncodable](name: T, age: Int) extends JsonEnco
 }
 ```
 
-- しかしこれはあんまりうれしくなくて、`GenericNameSB`には`Int`などの`JsonEncodable`にしていない or できない型を入れることができなくなってしまう
+- しかしこれはあんまりうれしくなくて、`GenericNameSB`には `Int`などの `JsonEncodable`にしていない or できない型を入れることができなくなってしまう
 
 ```scala
 GenericNameSB(1, 2)
@@ -261,6 +268,7 @@ GenericNameSB(1, 2)
 ---
 
 ## Implicit Derivation 3
+
 - 型クラスを使用すると前述の課題が解決できる
 
 ```scala
@@ -300,9 +308,9 @@ toJson(GenericNameTC(Name("john"), 1))
 implicit def genericNameTCEncode[T](implicit encoder: Encoder[T]): Encoder[GenericNameTC[T]] = ...
 ```
 
-- このシグネチャが意味するのは任意の`T`に対して`GenericNameTC[T]`の`Encoder`インスタンスを生成するというとても広い定義
-- しかしこの定義の実装時には当然`T`をJson化する必要がある
-- そのためにimplicit parameterとして`Encoder[T]`インスタンスを要求している
+- このシグネチャが意味するのは任意の `T`に対して `GenericNameTC[T]`の `Encoder`インスタンスを生成するというとても広い定義
+- しかしこの定義の実装時には当然 `T`をJson化する必要がある
+- そのためにimplicit parameterとして `Encoder[T]`インスタンスを要求している
 
 ```scala
 implicit def genericNameTCEncode[T](implicit encoder: Encoder[T]): Encoder[GenericNameTC[T]] =
@@ -317,6 +325,7 @@ implicit def genericNameTCEncode[T](implicit encoder: Encoder[T]): Encoder[Gener
 ---
 
 ## Implicit Derivation 5
+
 - 型クラス版の実装を見てみると各データ型に対する型クラスインスタンスの定義は「別々に」行われていることがわかる
 
 ```scala
@@ -329,7 +338,6 @@ implicit def genericNameTCEncode[T](implicit encoder: Encoder[T]): Encoder[Gener
 - Scalaの型クラスがすごいのは別々に定義してあるimplicit(=型クラスのインスタンス)をコンパイラが集め、最終的にほしいデータ型のインスタンスを生成してくれること
 - `Encoder[String] + Encoder[GenericNameTC[T] = Encoder[GenericNameTC[String]`のようなイメージ
 - このようにアドホックにデータ型の組み合わせにおいて型クラスのインスタンスが定義されることを「Implicit Derivation」とか「型クラスの導出」とか言ったりする
-
 
 ---
 
