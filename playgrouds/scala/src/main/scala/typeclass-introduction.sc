@@ -1,5 +1,24 @@
 import io.circe.{Encoder, Json}
 
+List(1, 2, 3)
+List("a", "b", "c")
+
+trait Figure
+case class Circle(radius: Double) extends Figure
+case class Rectangle(width: Double, height: Double) extends Figure
+
+val fig1: Figure = Circle(1.0)
+val fig2: Figure = Rectangle(1.0, 2.0)
+
+object Concat {
+  def concat(a: String, b: String) = a + b
+  def concat(a: Int, b: Int) = a + b
+}
+
+Concat.concat("a", "b")
+Concat.concat(1, 2)
+
+
 implicit val intEncoder: Encoder[Int] = new Encoder[Int] {
   override def apply(a: Int) = Json.fromInt(a)
 }
@@ -55,4 +74,4 @@ toJson(GenericNameTC("hoge", 1))
 
 case class Name(value: String)
 
-toJson(GenericNameTC(Name("john"), 1))
+//toJson(GenericNameTC(Name("john"), 1))

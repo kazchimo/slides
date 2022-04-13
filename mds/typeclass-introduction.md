@@ -18,16 +18,17 @@ highlighter: shiki
 
 - そもそも「型クラス=Typeclass」という名前は何なのか
 - 最初に聞いたときの思ひで
-  - 「型」と「クラス」って同じちゃうん？（クソ雑魚Rubyプログラマ並の感想）
+  - 「型」と「クラス」って同じじゃないの？
 - なんで同じ言葉並べてるんや？
   - 「型」と「クラス」は型クラスの文脈では明確に違う意味を持つ
 - 型: いわゆるデータ型、Int、String、Dogとか
-  - クラス: 型を分類するもの
-  - つまり型クラスとはデータ型を何らかの特徴に基づいて分類し、その分類に基づいて多態性を実現する機能
+- クラス: 型を分類するもの
+- つまり型クラスとはデータ型を何らかの特徴に基づいて分類し、その分類に基づいて多態性を実現する機能
 
 ---
 
 # Scalaにおける型クラスの実装
+## 型クラスの実態
 
 - Scalaではtraitを使用して型クラスを実現する
 - 題材としてcirceのEncoderを考える
@@ -49,6 +50,8 @@ trait Encoder[A] extends Serializable {
 
 ---
 
+## 型クラスのインスタンス
+
 - 実際に Encoder型クラスを使って具体的な型にencode能力を与えるためには各々型への実装を用意する
 
 ```scala
@@ -65,7 +68,7 @@ val stringEncoder = new Encoder[String] {
 - 型クラスが型を分類するためのものだったのに対して、特定の型に対して型クラスが実装されたので抽象度が下がっているためこう呼べる
 
 ---
-
+## 型クラスインスタンスの使用
 実際に型クラスを通じて獲得した新たな操作を使用するためには型クラスのインスタンスを使えばいい
 
 ```scala
@@ -89,14 +92,29 @@ stringEncoder("foo")
 
 - いわゆるジェネリクスだと思っておけばいい
 
+```scala
+List(1, 2, 3)
+List("a", "b", "c")
+// val res0: List[Int] = List(1, 2, 3)
+// val res1: List[String] = List(a, b, c)
+```
+
 ---
 
 ## サブタイピング
 
 - Javaでいうクラスの継承
 - tsみたいなstructural subtypingだと構造として同じかどうか（多分これはサブタイピングとみなしていい）
-- オブジェクト指向が言ってる多相性はこれのこと
+- Javaのオブジェクト指向が言ってる多相性はこれのこと
 
+```scala
+trait Figure
+case class Circle(radius: Double) extends Figure
+case class Rectangle(width: Double, height: Double) extends Figure
+
+val fig1: Figure = Circle(1.0)
+val fig2: Figure = Rectangle(1.0, 2.0)
+```
 ---
 
 ## アドホック多相
@@ -104,6 +122,16 @@ stringEncoder("foo")
 - 処理対象のデータ型によって処理内容を変更する多相性のこと
 - 関数のオーバーロードとかこれ
 - 型クラスが実現する多相性もこれ
+
+```scala
+object Concat {
+  def concat(a: String, b: String) = a + b
+  def concat(a: Int, b: Int) = a + b
+}
+
+Concat.concat("a", "b") // => ab
+Concat.concat(1, 2) // => 3
+```
 
 ---
 
