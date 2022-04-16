@@ -72,11 +72,9 @@ val stringEncoder = new Encoder[String] {
 実際に型クラスを通じて獲得した新たな操作を使用するためには型クラスのインスタンスを使えばいい
 
 ```scala
-intEncoder(1)
-// val res0: io.circe.Json = 1
+intEncoder(1) // => Json.fromInt(1)
 
-stringEncoder("foo")
-// val res1: io.circe.Json = "foo"
+stringEncoder("foo") // => Json.fromString("foo")
 ```
 
 ---
